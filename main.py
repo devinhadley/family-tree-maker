@@ -11,51 +11,55 @@ def retrieve_data():
     sheet = gc.open_by_url(SHEET_URL)
     worksheet = sheet.worksheet("Form Responses 1")
 
-    grand_bigs = worksheet.col_values(2)[1:]
-    bigs = worksheet.col_values(3)[1:]
-    littles = worksheet.col_values(4)[1:]
-    families = worksheet.col_values(5)[1:]
-    names = worksheet.col_values(6)[1:]
-
-    return {"GB": grand_bigs, "B": bigs, "L": littles, "F": families, "N": names}, worksheet.get_all_values()
+    return worksheet.get_all_values()
 
 
 def main():
+    CURRENT_FAMILY = "White"
     graph = graphviz.Digraph("family-tree", comment="Family Tree")
-    data, all_values = retrieve_data()
+    all_values = retrieve_data()
 
     id_number = 0
     name_labels = {}
     relationships = {}
 
-    for name in data["GB"]:
-        if name not in name_labels and not name == "":
-            name_labels[name] = str(id_number)
-            id_number += 1
-
-    for name in data["B"]:
-        if name not in name_labels and not name == "":
-            name_labels[name] = str(id_number)
-            id_number += 1
-
-    for name in data["N"]:
-        if name not in name_labels and not name == "":
-            name_labels[name] = str(id_number)
-            id_number += 1
-
-    for name in data["L"]:
-        if name == "":
+    for item in all_values[1:]:
+        if item[4] != CURRENT_FAMILY:
             continue
-        littles = name.split(',')
-        for little in littles:
-            cleaned_name = little.strip()
-            print(cleaned_name)
-            if cleaned_name not in name_labels:
-                name_labels[cleaned_name] = str(id_number)
-                id_number += 1
+        for index, name in enumerate(item):
+            # If not a member of the current family then skip this person.
+            if index == 1:
+                # Grand Big
+                if name not in name_labels and not name == "":
+                    name_labels[name.strip()] = str(id_number)
+                    id_number += 1
 
-    for key in name_labels:
-        print(key, name_labels[key])
+            elif index == 2:
+                # Big
+                if name not in name_labels and not name == "":
+                    name_labels[name.strip()] = str(id_number)
+                    id_number += 1
+
+            elif index == 5:
+                # Name
+                if name not in name_labels and not name == "":
+                    name_labels[name.strip()] = str(id_number)
+                    id_number += 1
+
+            elif index == 3:
+                # Little(s)
+                for sub_name in name:
+                    if name == "":
+                        continue
+                    littles = name.split(',')
+                    for little in littles:
+                        cleaned_name = little.strip()
+                        if cleaned_name not in name_labels:
+                            name_labels[cleaned_name] = str(id_number)
+                            id_number += 1
+
+    # for key in name_labels:
+    #     print(key, name_labels[key])
 
     # Create all the nodes.
     for key in name_labels:
@@ -64,9 +68,12 @@ def main():
     for item in enumerate(all_values[1:]):
         records = item[1]
         # Set grand big little.
+        # If not a member of the current family then skip this person.
+        if records[4] != CURRENT_FAMILY:
+            continue
         if records[1] != "":
-            a = name_labels[records[1]]
-            b = name_labels[records[2]]
+            a = name_labels[records[1].strip()]
+            b = name_labels[records[2].strip()]
             if not a+b in relationships:
                 graph.edge(a,b)
                 relationships[a+b] = None
@@ -75,14 +82,14 @@ def main():
             littles = records[3].split(',')
             for little in littles:
                 cleaned_name = little.strip()
-                if not name_labels[records[5]] + name_labels[cleaned_name] in relationships:
-                    graph.edge(name_labels[records[5]], name_labels[cleaned_name])
-                    relationships[name_labels[records[5]] + name_labels[cleaned_name]] = None
+                if not name_labels[records[5].strip()] + name_labels[cleaned_name] in relationships:
+                    graph.edge(name_labels[records[5].strip()], name_labels[cleaned_name])
+                    relationships[name_labels[records[5].strip()] + name_labels[cleaned_name]] = None
 
         # Set big to name.
-        if not name_labels[records[2]] + name_labels[records[5]] in relationships:
-            graph.edge(name_labels[records[2]], name_labels[records[5]])
-            relationships[name_labels[records[2]] + name_labels[records[5]]] = None
+        if not name_labels[records[2].strip()] + name_labels[records[5].strip()] in relationships:
+            graph.edge(name_labels[records[2].strip()], name_labels[records[5].strip()])
+            relationships[name_labels[records[2].strip()] + name_labels[records[5].strip()]] = None
 
     graph.render(directory='doctest-output', view=True)
 
