@@ -1,3 +1,4 @@
+import subprocess
 import graphviz
 import gspread
 
@@ -14,8 +15,7 @@ def retrieve_data():
     return worksheet.get_all_values()
 
 
-def main():
-    CURRENT_FAMILY = "White"
+def create_graph(current_family, families):
     graph = graphviz.Digraph("family-tree", comment="Family Tree")
     all_values = retrieve_data()
 
@@ -24,8 +24,14 @@ def main():
     relationships = {}
 
     for item in all_values[1:]:
-        if item[4] != CURRENT_FAMILY:
+
+        if item[4] not in families:
+            print("Invalid Family:", item[4])
             continue
+
+        if item[4] != current_family:
+            continue
+
         for index, name in enumerate(item):
             # If not a member of the current family then skip this person.
             if index == 1:
@@ -69,7 +75,7 @@ def main():
         records = item[1]
         # Set grand big little.
         # If not a member of the current family then skip this person.
-        if records[4] != CURRENT_FAMILY:
+        if records[4] != current_family:
             continue
         if records[1] != "":
             a = name_labels[records[1].strip()]
@@ -91,8 +97,25 @@ def main():
             graph.edge(name_labels[records[2].strip()], name_labels[records[5].strip()])
             relationships[name_labels[records[2].strip()] + name_labels[records[5].strip()]] = None
 
-    graph.render(directory='doctest-output', view=True)
+    graph.render(directory='graph')
+
+    #Write the title.
+    contents = None
+    with open("graph/family-tree.gv", "r") as file:
+        contents = file.readlines()
+        contents.insert(2, "\tlabelloc=\"t\"\n")
+        contents.insert(3, f"\tlabel=\"{current_family} Family\"\n")
+
+    with open("graph/family-tree.gv", "w") as file:
+        contents = "".join(contents)
+        file.write(contents)
+
+    subprocess.run(["dot", '-Tpng','graph/family-tree.gv', '-o', 'graph/family-tree.png'])
+
+    
+
 
 
 if __name__ == "__main__":
-    main()
+    families = ['White', 'Toon', 'Big Mack', 'Borracho', 'Keystone']
+    create_graph('White', families)
