@@ -1,6 +1,8 @@
 import subprocess
 import graphviz
 import gspread
+import imgbbpy
+import keys
 
 
 def retrieve_data():
@@ -14,6 +16,33 @@ def retrieve_data():
 
     return worksheet.get_all_values()
 
+def write_image_urls_to_sheet(image_urls):
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/1R56rbCeuewozkzA6zBlH4Njy7WSa8KQEFmyQ1cBHYIk/edit#gid=0"
+    gc = gspread.oauth()
+    sheet = gc.open_by_url(SHEET_URL)
+    worksheet = sheet.worksheet("Images")
+
+    
+    # Family images:
+    # White A4
+    # Toon E4
+    # Borracho A12
+    # Big Mack E12
+    # Keystone A19
+
+    worksheet.update_acell("A4", f"=HYPERLINK(\"{image_urls['White']}\", \"White Family Tree Link\")") 
+    worksheet.update_acell("E4", f"=HYPERLINK(\"{image_urls['Toon']}\", \"Toon Family Tree Link\")") 
+    worksheet.update_acell("A12", f"=HYPERLINK(\"{image_urls['Borracho']}\", \"Borracho Family Tree Link\")")
+    worksheet.update_acell("E12", f"=HYPERLINK(\"{image_urls['Big Mack']}\", \"Big Mack Family Tree Link\")") 
+    worksheet.update_acell("A19", f"=HYPERLINK(\"{image_urls['Keystone']}\", \"Keystone Family Tree Link\")")
+
+         
+
+    
+
+
+def upload_graph(client) -> str:
+    return client.upload(file='graph/family-tree.png').url
 
 def create_graph(current_family, families):
     graph = graphviz.Digraph("family-tree", comment="Family Tree")
@@ -117,5 +146,20 @@ def create_graph(current_family, families):
 
 
 if __name__ == "__main__":
+    image_urls = {}
     families = ['White', 'Toon', 'Big Mack', 'Borracho', 'Keystone']
-    create_graph('White', families)
+    client = imgbbpy.SyncClient(keys.IMGBB_API_KEY)
+
+
+    create_graph("Big Mack", families)
+    for family in families:
+        create_graph(family, families)
+        image_url = upload_graph(client)
+        image_urls[family] = image_url
+
+    write_image_urls_to_sheet(image_urls)
+
+
+
+
+
